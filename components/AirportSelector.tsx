@@ -256,7 +256,7 @@ export default function AirportSelector({
                       <div>
                         <div className={`font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                           {airport.city} ({airport.code})
-                          {airport.cityCode && <span className="ml-1 text-xs text-primary">City Code</span>}
+                          {airport.cityCode}
                         </div>
                         <div className={`text-sm ${dropdownTextClass} truncate`}>
                           {airport.name}

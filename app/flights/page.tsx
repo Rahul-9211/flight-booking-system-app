@@ -52,26 +52,45 @@ export default function FlightsPage() {
         if (priceRange[0] > 0) params.min_price = priceRange[0].toString();
         if (priceRange[1] < 2000) params.max_price = priceRange[1].toString();
         
-        const response = await flightService.searchFlights(params);
-        
-        // Sort flights
-        let sortedFlights = [...response.data];
-        if (sortBy === 'price') {
-          sortedFlights.sort((a, b) => a.price - b.price);
-        } else if (sortBy === 'departure') {
-          sortedFlights.sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime());
-        } else if (sortBy === 'duration') {
-          sortedFlights.sort((a, b) => {
-            const durationA = new Date(a.arrival_time).getTime() - new Date(a.departure_time).getTime();
-            const durationB = new Date(b.arrival_time).getTime() - new Date(b.departure_time).getTime();
-            return durationA - durationB;
-          });
+        try {
+          const response = await flightService.searchFlights(params);
+          
+          // Check if we got any flights back
+          if (response.data && response.data.length === 0) {
+            // No flights found that match criteria
+            setFlights([]);
+          } else {
+            // Sort flights
+            let sortedFlights = [...response.data];
+            if (sortBy === 'price') {
+              sortedFlights.sort((a, b) => a.price - b.price);
+            } else if (sortBy === 'departure') {
+              sortedFlights.sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime());
+            } else if (sortBy === 'duration') {
+              sortedFlights.sort((a, b) => {
+                const durationA = new Date(a.arrival_time).getTime() - new Date(a.departure_time).getTime();
+                const durationB = new Date(b.arrival_time).getTime() - new Date(b.departure_time).getTime();
+                return durationA - durationB;
+              });
+            }
+            
+            setFlights(sortedFlights);
+          }
+        } catch (apiErr: any) {
+          // Handle API errors but still show mock flights
+          if (apiErr.response && apiErr.response.status === 401) {
+            setError('Authentication failed. Using demo data instead.');
+          } else {
+            setError(apiErr.message || 'Failed to fetch flights. Using demo data instead.');
+          }
+          
+          // Generate mock flights that match the search criteria
+          const mockFlights = generateMockFlights();
+          setFlights(mockFlights);
         }
-        
-        setFlights(sortedFlights);
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch flights');
-        // For demo purposes, let's add some mock data
+        // Handle any other errors
+        setError('An unexpected error occurred. Using demo data instead.');
         setFlights(generateMockFlights());
       } finally {
         setLoading(false);
@@ -217,21 +236,97 @@ export default function FlightsPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       ) : error ? (
-        <div className="glass-effect rounded-xl p-6 text-center">
-          <p className="text-red-400">{error}</p>
-          <p className="mt-2 text-white/70">Showing demo flights instead</p>
+        <div className="space-y-6">
+          <motion.div 
+            className="glass-effect rounded-xl p-6 text-center mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h3 className="text-xl font-bold mb-2">API Connection Notice</h3>
+            <p className="text-amber-400 mb-2">{error}</p>
+            <p className="text-white/70 mb-2">Showing demo flights that match your search criteria.</p>
+          </motion.div>
+          
+          {/* Display mock flights even when there's an error */}
+          {flights.length > 0 && flights.map((flight, index) => (
+            <motion.div
+              key={flight.id}
+              className="glass-effect rounded-xl overflow-hidden hover-scale"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 * index }}
+            >
+              <div className="p-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                  <div>
+                    <div className="text-sm text-white/60 mb-1">{flight.airline}</div>
+                    <div className="text-lg font-bold">{flight.flight_number}</div>
+                  </div>
+                  
+                  <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-8">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold futuristic-text">{formatTime(flight.departure_time)}</div>
+                      <div className="text-sm text-white/60">{flight.origin}</div>
+                    </div>
+                    
+                    <div className="flex flex-col items-center">
+                      <div className="text-sm text-white/60">{calculateDuration(flight.departure_time, flight.arrival_time)}</div>
+                      <div className="relative w-32 md:w-48 h-0.5 bg-white/20 my-2">
+                        <div className="absolute top-1/2 right-0 w-2 h-2 rounded-full bg-primary transform -translate-y-1/2"></div>
+                        <div className="absolute top-1/2 left-0 w-2 h-2 rounded-full bg-primary transform -translate-y-1/2"></div>
+                      </div>
+                      <div className="text-xs text-white/40">{formatDate(flight.departure_time)}</div>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="text-2xl font-bold futuristic-text">{formatTime(flight.arrival_time)}</div>
+                      <div className="text-sm text-white/60">{flight.destination}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary">${flight.price}</div>
+                    <div className="text-sm text-white/60">{flight.available_seats} seats left</div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end">
+                  <Link 
+                    href={`/flights/${flight.id}`}
+                    className="px-6 py-2 bg-gradient-to-r from-primary/20 to-secondary/20 hover:from-primary/30 hover:to-secondary/30 border border-white/10 rounded-full transition-all"
+                  >
+                    Select Flight
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
       ) : flights.length === 0 ? (
-        <div className="glass-effect rounded-xl p-8 text-center">
+        <motion.div 
+          className="glass-effect rounded-xl p-8 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <h3 className="text-xl font-bold mb-2">No Flights Found</h3>
-          <p className="text-white/70 mb-4">Try adjusting your search criteria</p>
-          <Link 
-            href="/"
-            className="px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-lg inline-block"
-          >
-            New Search
-          </Link>
-        </div>
+          <p className="text-white/70 mb-4">We couldn't find any flights matching your search criteria.</p>
+          <div className="flex flex-col md:flex-row gap-4 justify-center">
+            <Link 
+              href="/"
+              className="px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-lg inline-block"
+            >
+              New Search
+            </Link>
+            <button
+              onClick={() => setFlights(generateMockFlights())}
+              className="px-6 py-3 bg-gradient-to-r from-primary/20 to-secondary/20 border border-white/10 rounded-lg inline-block hover:from-primary/30 hover:to-secondary/30"
+            >
+              Show Demo Flights
+            </button>
+          </div>
+        </motion.div>
       ) : (
         <div className="space-y-6">
           {flights.map((flight, index) => (

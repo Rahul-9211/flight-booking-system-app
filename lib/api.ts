@@ -263,7 +263,7 @@ export const authService = {
 
 // Flight services
 export const flightService = {
-  searchFlights: async (params: Record<string, string>) => {
+    searchFlights: async (params: Record<string, string>) => {
     try {
       const response = await api.get('/flights', { params });
       return response;
