@@ -275,9 +275,9 @@ export const flightService = {
   getFlightById: async (id: string) => {
     try {
       const response = await api.get(`/flights/${id}`);
-      return response;
+      return response.data;
     } catch (error) {
-      console.error(`Error fetching flight ${id}:`, error);
+      console.error('Error fetching flight details:', error);
       throw error;
     }
   },
@@ -342,6 +342,122 @@ export const paymentService = {
   refundPayment: (paymentId: string) => api.post(`/payments/${paymentId}/refund`),
 };
 
+// Payment-related API functions
+export const paymentApi = {
+  // Get all payments for the current user
+  getUserPayments: async () => {
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Include auth token if you have authentication
+          // 'Authorization': `Bearer ${getToken()}`
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch payments');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching user payments:', error);
+      throw error;
+    }
+  },
+  
+  // Get payment details for a specific booking
+  getPaymentByBookingId: async (bookingId: string) => {
+    try {
+      const response = await fetch(`/api/payments/booking/${bookingId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${getToken()}`
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment details');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching payment details:', error);
+      throw error;
+    }
+  },
+  
+  // Create a new payment for a booking
+  createPayment: async (bookingData: any) => {
+    try {
+      const response = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify(bookingData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create payment');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      throw error;
+    }
+  },
+  
+  // Process a pending payment
+  processPayment: async (paymentId: string, paymentDetails: any) => {
+    try {
+      const response = await fetch(`/api/payments/${paymentId}/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify(paymentDetails),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to process payment');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      throw error;
+    }
+  },
+  
+  // Refund a completed payment
+  refundPayment: async (paymentId: string) => {
+    try {
+      const response = await fetch(`/api/payments/${paymentId}/refund`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${getToken()}`
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to refund payment');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error refunding payment:', error);
+      throw error;
+    }
+  },
+};
+
 // Helper functions to generate mock data
 function generateMockFlights(params: Record<string, string>) {
   const count = 5 + Math.floor(Math.random() * 5);
@@ -376,26 +492,34 @@ function generateMockFlights(params: Record<string, string>) {
   return flights;
 }
 
-function generateMockFlight(id: string) {
-  const cities = ['NYC', 'LAX', 'CHI', 'MIA', 'SFO', 'DFW', 'SEA', 'BOS'];
+export function generateMockFlight(origin: string, destination: string, flightNumber: string) {
+  // Generate a random departure time in the next 30 days
+  const departureDate = new Date();
+  departureDate.setDate(departureDate.getDate() + Math.floor(Math.random() * 30) + 1);
+  departureDate.setHours(Math.floor(Math.random() * 24));
+  departureDate.setMinutes(Math.floor(Math.random() * 12) * 5); // Round to nearest 5 minutes
+  departureDate.setSeconds(0);
+  departureDate.setMilliseconds(0);
+  
+  // Generate a random flight duration between 1 and 8 hours
+  const durationHours = Math.floor(Math.random() * 7) + 1;
+  const durationMinutes = Math.floor(Math.random() * 12) * 5; // Round to nearest 5 minutes
+  
+  // Calculate arrival time
+  const arrivalDate = new Date(departureDate);
+  arrivalDate.setHours(arrivalDate.getHours() + durationHours);
+  arrivalDate.setMinutes(arrivalDate.getMinutes() + durationMinutes);
+  
   const airlines = ['Cosmic Airways', 'Stellar Airlines', 'Quantum Jets', 'Nebula Air'];
   const aircraft = ['Boeing 787-9', 'Airbus A350-900', 'Quantum X-1000', 'Stellar Cruiser'];
   
-  const fromCity = cities[Math.floor(Math.random() * cities.length)];
-  const toCity = cities.filter(c => c !== fromCity)[Math.floor(Math.random() * (cities.length - 1))];
-  
-  const departureHour = 6 + Math.floor(Math.random() * 12);
-  const flightDuration = 2 + Math.floor(Math.random() * 6);
-  const departureTime = `2024-06-15T${departureHour.toString().padStart(2, '0')}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}:00`;
-  const arrivalTime = new Date(new Date(departureTime).getTime() + flightDuration * 60 * 60 * 1000).toISOString();
-  
   return {
-    id,
-    flight_number: `CS${id.slice(-3)}`,
-    origin: fromCity,
-    destination: toCity,
-    departure_time: departureTime,
-    arrival_time: arrivalTime,
+    id: `${origin}-${destination}-${flightNumber}`,
+    flight_number: flightNumber,
+    origin,
+    destination,
+    departure_time: departureDate.toISOString(),
+    arrival_time: arrivalDate.toISOString(),
     price: 100 + Math.floor(Math.random() * 900),
     available_seats: 5 + Math.floor(Math.random() * 50),
     airline: airlines[Math.floor(Math.random() * airlines.length)],
@@ -406,4 +530,4 @@ function generateMockFlight(id: string) {
   };
 }
 
-export default api; 
+export default api;

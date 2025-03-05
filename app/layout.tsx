@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import TestBackground from "@/components/TestBackground";
 import LoadUser from '@/components/LoadUser';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 // Temporarily comment out the problematic component
 // import SpaceBackground from "@/components/SpaceBackground";
 
@@ -32,15 +33,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-[#050816] text-white`}
       >
-        <LoadUser />
-        {/* <SpaceBackground /> */}
-        <TestBackground />
-        <div className="relative z-10">
-          <Navbar />
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
-        </div>
+        <ThemeProvider>
+          <LoadUser />
+          {/* <SpaceBackground /> */}
+          <TestBackground />
+          <div className="relative z-10">
+            <Navbar />
+            <main className="container mx-auto px-4 py-8">
+              {children}
+            </main>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );

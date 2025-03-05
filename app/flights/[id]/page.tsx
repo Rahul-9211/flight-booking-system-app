@@ -1,311 +1,338 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { useAuthStore } from '@/store/authStore';
-import { bookingService } from '@/lib/api';
+import { motion } from 'framer-motion';
+import PassengerSelector from '@/components/PassengerSelector';
+import { useTheme } from '@/contexts/ThemeContext';
+import { bookingService, flightService } from '@/lib/api';
+
+interface FlightDetailsProps {
+  params: {
+    id: string;
+  };
+}
 
 interface Flight {
   id: string;
   flight_number: string;
+  airline: string;
   origin: string;
   destination: string;
   departure_time: string;
   arrival_time: string;
   price: number;
+  total_seats: number;
   available_seats: number;
-  airline: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
   aircraft?: string;
   terminal?: string;
   gate?: string;
-  status?: string;
 }
 
-export default function FlightDetailPage() {
-  const params = useParams();
+export default function FlightDetailsPage({ params }: FlightDetailsProps) {
+  const { id } = params;
   const router = useRouter();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
   const [flight, setFlight] = useState<Flight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [numberOfSeats, setNumberOfSeats] = useState(1);
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [bookingError, setBookingError] = useState<string | null>(null);
-  
-  const flightId = params.id as string;
-  
-  const { isAuthenticated } = useAuthStore();
+  const [passengers, setPassengers] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   useEffect(() => {
-    const fetchFlightDetails = async () => {
-      setLoading(true);
-      setError(null);
-      
+    async function fetchFlightDetails() {
       try {
-        // In a real app, we would fetch from API
-        // const response = await flightService.getFlightById(flightId);
-        // setFlight(response.data);
-        
-        // For demo, create a mock flight
-        setFlight(generateMockFlight(flightId));
+        const data = await flightService.getFlightById(id);
+        console.log('Flight data:', data);
+        setFlight(data);
       } catch (err: any) {
-        setError('Failed to fetch flight details');
+        setError(err.message || 'Failed to load flight details');
       } finally {
         setLoading(false);
       }
-    };
-    
-    fetchFlightDetails();
-  }, [flightId]);
-  
-  // Function to generate a mock flight for demo
-  const generateMockFlight = (id: string): Flight => {
-    const cities = ['NYC', 'LAX', 'CHI', 'MIA', 'SFO', 'DFW', 'SEA', 'BOS'];
-    const airlines = ['Cosmic Airways', 'Stellar Airlines', 'Quantum Jets', 'Nebula Air'];
-    const aircraft = ['Boeing 787-9', 'Airbus A350-900', 'Quantum X-1000', 'Stellar Cruiser'];
-    
-    const fromCity = cities[Math.floor(Math.random() * cities.length)];
-    const toCity = cities.filter(c => c !== fromCity)[Math.floor(Math.random() * (cities.length - 1))];
-    
-    const departureHour = 6 + Math.floor(Math.random() * 12);
-    const flightDuration = 2 + Math.floor(Math.random() * 6);
-    const departureTime = `2024-06-15T${departureHour.toString().padStart(2, '0')}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}:00`;
-    const arrivalTime = new Date(new Date(departureTime).getTime() + flightDuration * 60 * 60 * 1000).toISOString();
-    
-    return {
-      id,
-      flight_number: `CS${id.slice(-3)}`,
-      origin: fromCity,
-      destination: toCity,
-      departure_time: departureTime,
-      arrival_time: arrivalTime,
-      price: 100 + Math.floor(Math.random() * 900),
-      available_seats: 5 + Math.floor(Math.random() * 50),
-      airline: airlines[Math.floor(Math.random() * airlines.length)],
-      aircraft: aircraft[Math.floor(Math.random() * aircraft.length)],
-      terminal: String.fromCharCode(65 + Math.floor(Math.random() * 6)),
-      gate: `${Math.floor(Math.random() * 30) + 1}`,
-      status: 'On Time'
-    };
-  };
-  
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), 'h:mm a');
-  };
-  
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'EEEE, MMMM d, yyyy');
-  };
-  
-  const calculateDuration = (departure: string, arrival: string) => {
-    const durationMs = new Date(arrival).getTime() - new Date(departure).getTime();
-    const hours = Math.floor(durationMs / (1000 * 60 * 60));
-    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
-  };
-  
-  const handleBooking = async () => {
-    if (!isAuthenticated) {
-      router.push(`/signin?redirect=/flights/${flightId}`);
-      return;
     }
     
-    setBookingLoading(true);
-    setBookingError(null);
+    fetchFlightDetails();
+  }, [id]);
+  
+  const handleBookFlight = async () => {
+    setIsProcessing(true);
     
     try {
-      // Create the booking with the API
+      if (!flight) {
+        throw new Error('Flight details not available');
+      }
+      
+      // Create a booking first
       const bookingData = {
-        flight_id: flightId,
-        number_of_seats: numberOfSeats,
-        payment_method: "credit_card" // You can make this dynamic later
+        flight_id: flight.id,
+        number_of_seats: passengers,
+        payment_method: "credit_card"
       };
       
+      // Create the booking
       const response = await bookingService.createBooking(bookingData);
+      const booking = response.data;
       
-      // Redirect to the booking details page
-      router.push(`/bookings/${response.data.id}`);
+      // Redirect to the booking page where payment can be completed
+      router.push(`/bookings/${booking.id}`);
     } catch (err: any) {
-      console.error('Booking error:', err);
-      setBookingError(err.message || 'Failed to create booking. Please try again.');
+      console.error('Error creating booking:', err);
+      setError(err.message || 'Failed to create booking. Please try again.');
     } finally {
-      setBookingLoading(false);
+      setIsProcessing(false);
     }
   };
   
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
       </div>
     );
   }
   
   if (error || !flight) {
     return (
-      <div className="glass-effect rounded-xl p-8 text-center my-12">
-        <h3 className="text-xl font-bold mb-2">Flight Not Found</h3>
-        <p className="text-white/70 mb-4">{error || 'The requested flight could not be found'}</p>
-        <Link 
-          href="/flights"
-          className="px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-lg inline-block"
-        >
-          Back to Flights
-        </Link>
+      <div className="container mx-auto px-4 py-8">
+        <div className={`p-4 rounded-lg ${isDark ? 'bg-red-900/50' : 'bg-red-100'} text-center`}>
+          <h2 className="text-xl font-bold mb-2">Error</h2>
+          <p className={isDark ? 'text-white/80' : 'text-red-700'}>
+            {error || 'Flight not found'}
+          </p>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }
   
+  const departureDate = new Date(flight.departure_time);
+  const arrivalDate = new Date(flight.arrival_time);
+  
+  // Calculate flight duration
+  const durationMs = arrivalDate.getTime() - departureDate.getTime();
+  const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+  const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  const totalPrice = flight.price * passengers;
+  
   return (
-    <div className="py-8">
-      <Link 
-        href="/flights" 
-        className="inline-flex items-center text-white/70 hover:text-white mb-6 transition-colors"
+    <div className="container mx-auto px-4 py-8">
+      <button
+        onClick={() => router.back()}
+        className={`flex items-center mb-6 ${isDark ? 'text-white/70 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
         </svg>
-        Back to Flights
-      </Link>
+        Back to Results
+      </button>
       
-      <motion.div 
-        className="glass-effect rounded-xl overflow-hidden mb-8"
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className={`rounded-lg overflow-hidden ${
+          isDark ? 'glass-effect' : 'bg-white shadow-lg border border-gray-200'
+        }`}
       >
-        <div className="p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+        <div className={`px-6 py-4 ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-sm text-white/60 mb-1">{flight.airline}</div>
-              <div className="text-3xl font-bold futuristic-text">{flight.flight_number}</div>
-              {flight.aircraft && (
-                <div className="text-sm text-white/60 mt-1">{flight.aircraft}</div>
-              )}
+              <h1 className="text-2xl font-bold">{flight.airline} Flight {flight.flight_number}</h1>
+              <p className={isDark ? 'text-white/70' : 'text-gray-600'}>
+                {format(departureDate, 'EEEE, MMMM d, yyyy')}
+              </p>
             </div>
             
-            <div className="text-right">
-              <div className="text-sm text-white/60">Status</div>
-              <div className="text-lg font-bold text-green-400">{flight.status || 'On Time'}</div>
+            <div className="mt-4 md:mt-0">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                flight.status === 'On Time' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {flight.status}
+              </span>
             </div>
           </div>
-          
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-8">
-            <div className="text-center">
-              <div className="text-4xl font-bold futuristic-text glow">{formatTime(flight.departure_time)}</div>
-              <div className="text-xl font-medium mt-1">{flight.origin}</div>
-              <div className="text-sm text-white/60 mt-1">{formatDate(flight.departure_time)}</div>
-              {flight.terminal && flight.gate && (
-                <div className="text-sm text-white/60 mt-2">
-                  Terminal {flight.terminal}, Gate {flight.gate}
-                </div>
-              )}
-            </div>
-            
-            <div className="flex flex-col items-center">
-              <div className="text-sm font-medium text-white/80 mb-2">
-                {calculateDuration(flight.departure_time, flight.arrival_time)}
-              </div>
-              <div className="relative w-32 md:w-64 h-0.5 bg-white/20 my-2">
-                <div className="absolute top-1/2 right-0 w-3 h-3 rounded-full bg-primary transform -translate-y-1/2"></div>
-                <div className="absolute top-1/2 left-0 w-3 h-3 rounded-full bg-primary transform -translate-y-1/2"></div>
-                <div className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full bg-white/40 transform -translate-x-1/2 -translate-y-1/2"></div>
-              </div>
-              <div className="text-xs text-white/40 mt-2">Direct Flight</div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-4xl font-bold futuristic-text glow">{formatTime(flight.arrival_time)}</div>
-              <div className="text-xl font-medium mt-1">{flight.destination}</div>
-              <div className="text-sm text-white/60 mt-1">{formatDate(flight.arrival_time)}</div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-6 border-t border-white/10">
-            <div>
-              <div className="text-sm text-white/60 mb-1">Price per passenger</div>
-              <div className="text-3xl font-bold text-primary">${flight.price}</div>
-              <div className="text-sm text-white/60 mt-1">{flight.available_seats} seats available</div>
-            </div>
-            
-            <div className="flex flex-col md:flex-row items-center gap-4">
-              <div className="w-full md:w-auto">
-                <label htmlFor="seats" className="block text-sm text-white/80 mb-1">
-                  Number of Seats
-                </label>
-                <select
-                  id="seats"
-                  value={numberOfSeats}
-                  onChange={(e) => setNumberOfSeats(parseInt(e.target.value))}
-                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                >
-                  {Array.from({ length: Math.min(6, flight.available_seats) }, (_, i) => i + 1).map((num) => (
-                    <option key={num} value={num}>
-                      {num} Seat{num > 1 ? 's' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <button
-                onClick={handleBooking}
-                disabled={bookingLoading}
-                className="px-8 py-3 bg-gradient-to-r from-primary to-secondary hover:opacity-90 rounded-lg font-medium transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {bookingLoading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Processing...
-                  </span>
-                ) : (
-                  `Book Now - $${flight.price * numberOfSeats}`
-                )}
-              </button>
-            </div>
-          </div>
-          
-          {bookingError && (
-            <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-center">
-              {bookingError}
-            </div>
-          )}
         </div>
-      </motion.div>
-      
-      <motion.div 
-        className="glass-effect rounded-xl p-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        <h2 className="text-xl font-bold mb-4 futuristic-text">Flight Information</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-medium mb-3">Amenities</h3>
-            <ul className="space-y-2">
-              {['Wi-Fi', 'In-flight Entertainment', 'Power Outlets', 'Meal Service', 'Extra Legroom'].map((amenity, index) => (
-                <li key={index} className="flex items-center text-white/80">
-                  <svg className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {amenity}
-                </li>
-              ))}
-            </ul>
+        <div className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center mb-8">
+            <div className="flex-1">
+              <div className="flex items-center">
+                <div className="text-center mr-4">
+                  <div className="text-3xl font-bold">{flight.origin}</div>
+                  <div className={isDark ? 'text-white/70' : 'text-gray-600'}>
+                    {format(departureDate, 'h:mm a')}
+                  </div>
+                </div>
+                
+                <div className="flex-1 px-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className={`w-full border-t ${isDark ? 'border-gray-700' : 'border-gray-300'}`}></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                      <span className={`px-2 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+                        <div className="flex flex-col items-center">
+                          <span className={`text-xs ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+                            {durationHours}h {durationMinutes}m
+                          </span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11.43a1 1 0 00-.725-.962l-5-1.429a1 1 0 01.725-1.962l5 1.429a1 1 0 00.725-.038l5-1.429a1 1 0 011.444.962l-7 14z" />
+                          </svg>
+                        </div>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-center ml-4">
+                  <div className="text-3xl font-bold">{flight.destination}</div>
+                  <div className={isDark ? 'text-white/70' : 'text-gray-600'}>
+                    {format(arrivalDate, 'h:mm a')}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <h2 className="text-lg font-semibold mb-4">Flight Details</h2>
+              
+              <div className={`p-4 rounded-lg ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Airline</p>
+                    <p className="font-medium">{flight.airline}</p>
+                  </div>
+                  
+                  <div>
+                    <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Flight Number</p>
+                    <p className="font-medium">{flight.flight_number}</p>
+                  </div>
+                  
+                  <div>
+                    <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Status</p>
+                    <p className="font-medium capitalize">{flight.status}</p>
+                  </div>
+                  
+                  <div>
+                    <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Duration</p>
+                    <p className="font-medium">{durationHours}h {durationMinutes}m</p>
+                  </div>
+                  
+                  {flight.aircraft && (
+                    <div>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Aircraft</p>
+                      <p className="font-medium">{flight.aircraft}</p>
+                    </div>
+                  )}
+                  
+                  {flight.terminal && (
+                    <div>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Terminal</p>
+                      <p className="font-medium">{flight.terminal}</p>
+                    </div>
+                  )}
+                  
+                  {flight.gate && (
+                    <div>
+                      <p className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Gate</p>
+                      <p className="font-medium">{flight.gate}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h2 className="text-lg font-semibold mb-4">Booking Summary</h2>
+              
+              <div className={`p-4 rounded-lg ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+                <div className="mb-4">
+                  <PassengerSelector
+                    label="Passengers"
+                    value={passengers}
+                    onChange={setPassengers}
+                    min={1}
+                    max={flight.available_seats}
+                    darkMode={isDark}
+                  />
+                </div>
+                
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+                  <div className="flex justify-between mb-2">
+                    <span className={isDark ? 'text-white/70' : 'text-gray-600'}>Price per passenger</span>
+                    <span className="font-medium">${flight.price.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total</span>
+                    <span>${totalPrice.toFixed(2)}</span>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handleBookFlight}
+                  disabled={isProcessing}
+                  className={`w-full py-3 rounded-lg bg-gradient-to-r from-primary to-secondary text-white font-medium ${
+                    isProcessing ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'
+                  }`}
+                >
+                  {isProcessing ? 'Processing...' : 'Proceed to Checkout'}
+                </button>
+              </div>
+            </div>
           </div>
           
           <div>
-            <h3 className="text-lg font-medium mb-3">Baggage Information</h3>
-            <div className="space-y-3 text-white/80">
-              <p>Carry-on: 1 bag (max 8kg)</p>
-              <p>Checked baggage: 1 bag (max 23kg)</p>
-              <p>Additional baggage fees may apply</p>
+            <h2 className="text-lg font-semibold mb-4">Important Information</h2>
+            
+            <div className={`p-4 rounded-lg ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+              <ul className="space-y-2">
+                <li className="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary mr-2 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <span className={isDark ? 'text-white/70' : 'text-gray-600'}>
+                    Please arrive at the airport at least 2 hours before departure for domestic flights and 3 hours for international flights.
+                  </span>
+                </li>
+                
+                <li className="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary mr-2 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <span className={isDark ? 'text-white/70' : 'text-gray-600'}>
+                    Each passenger is allowed one carry-on bag and one personal item. Additional baggage fees may apply.
+                  </span>
+                </li>
+                
+                <li className="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary mr-2 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <span className={isDark ? 'text-white/70' : 'text-gray-600'}>
+                    Valid identification is required for all passengers. International flights require a passport valid for at least 6 months beyond your return date.
+                  </span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>

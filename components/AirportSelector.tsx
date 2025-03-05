@@ -20,6 +20,7 @@ interface AirportSelectorProps {
   placeholder?: string;
   className?: string;
   excludeCode?: string;
+  darkMode?: boolean;
 }
 
 // Enhanced airports data with city codes for major cities
@@ -128,7 +129,8 @@ export default function AirportSelector({
   onChange, 
   placeholder = 'Select airport', 
   className = '',
-  excludeCode
+  excludeCode,
+  darkMode = true
 }: AirportSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -186,18 +188,28 @@ export default function AirportSelector({
     return acc;
   }, {} as Record<string, Airport[]>);
 
+  // Dynamic classes based on dark/light mode
+  const labelClass = darkMode ? "text-white/70" : "text-gray-700";
+  const inputBgClass = darkMode ? "glass-effect" : "bg-white border border-gray-300";
+  const inputTextClass = darkMode ? "text-white" : "text-gray-800";
+  const dropdownBgClass = darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-300";
+  const dropdownHeaderClass = darkMode ? "text-gray-400 bg-gray-800/50" : "text-gray-500 bg-gray-100";
+  const dropdownItemHoverClass = darkMode ? "hover:bg-gray-800" : "hover:bg-gray-100";
+  const dropdownItemActiveClass = darkMode ? "bg-gray-800" : "bg-gray-100";
+  const dropdownTextClass = darkMode ? "text-gray-400" : "text-gray-500";
+
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      <label className="block text-sm text-white/70 mb-1">{label}</label>
+      <label className={`block text-sm ${labelClass} mb-1`}>{label}</label>
       
       <div 
-        className="flex items-center glass-effect rounded-lg px-4 py-3 cursor-pointer"
+        className={`flex items-center ${inputBgClass} rounded-lg px-4 py-3 cursor-pointer`}
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? (
           <input
             type="text"
-            className="w-full bg-transparent outline-none"
+            className={`w-full bg-transparent outline-none ${inputTextClass}`}
             placeholder={placeholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -205,13 +217,13 @@ export default function AirportSelector({
             autoFocus
           />
         ) : (
-          <div className="flex-1 truncate">
+          <div className={`flex-1 truncate ${inputTextClass}`}>
             {getDisplayValue() || placeholder}
           </div>
         )}
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
-          className={`h-5 w-5 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+          className={`h-5 w-5 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''} ${darkMode ? 'text-white' : 'text-gray-500'}`} 
           viewBox="0 0 20 20" 
           fill="currentColor"
         >
@@ -221,32 +233,32 @@ export default function AirportSelector({
 
       {isOpen && (
         <div 
-          className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-gray-900 border border-gray-700 rounded-lg shadow-lg z-50"
+          className={`absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto ${dropdownBgClass} border rounded-lg shadow-lg z-50`}
           style={{ top: '100%' }}
         >
           {searchTerm && filteredAirports.length === 0 ? (
-            <div className="px-4 py-3 text-gray-400">No airports found</div>
+            <div className={`px-4 py-3 ${dropdownTextClass}`}>No airports found</div>
           ) : (
             Object.entries(groupedAirports).map(([country, airports]) => (
               <div key={country}>
-                <div className="px-4 py-2 text-xs text-gray-400 bg-gray-800/50 sticky top-0">
+                <div className={`px-4 py-2 text-xs ${dropdownHeaderClass} sticky top-0`}>
                   {country}
                 </div>
                 {airports.map((airport) => (
                   <div
                     key={airport.code}
-                    className={`px-4 py-3 cursor-pointer hover:bg-gray-800 transition-colors ${
-                      airport.code === value ? 'bg-gray-800' : ''
+                    className={`px-4 py-3 cursor-pointer ${dropdownItemHoverClass} transition-colors ${
+                      airport.code === value ? dropdownItemActiveClass : ''
                     }`}
                     onClick={() => handleSelect(airport.code)}
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-medium">
+                        <div className={`font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                           {airport.city} ({airport.code})
-                          {airport.cityCode }
+                          {airport.cityCode && <span className="ml-1 text-xs text-primary">City Code</span>}
                         </div>
-                        <div className="text-sm text-gray-400 truncate">
+                        <div className={`text-sm ${dropdownTextClass} truncate`}>
                           {airport.name}
                           {airport.state && ` • ${airport.state}`}
                         </div>

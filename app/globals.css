@@ -137,3 +137,78 @@ body {
   transition: all 0.5s ease-out !important;
   transition-delay: 0s !important;
 }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #8b5cf6;
+  --color-secondary: #6366f1;
+  --color-background: #ffffff;
+  --color-text: #1f2937;
+  --color-card: #f9fafb;
+  --color-card-border: #e5e7eb;
+}
+
+.dark {
+  --color-background: #000000;
+  --color-text: #f9fafb;
+  --color-card: #111827;
+  --color-card-border: #374151;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+@layer components {
+  .glass-effect {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 dark:bg-black/30 dark:border-white/10;
+  }
+  
+  .futuristic-text {
+    @apply tracking-wider font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-secondary text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-white py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Light mode scrollbar */
+.light ::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}

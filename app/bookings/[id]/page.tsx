@@ -5,8 +5,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
-import { bookingService } from '@/lib/api';
+import { bookingService, paymentApi } from '@/lib/api';
 import Modal from '@/components/Modal';
+import { useTheme } from '@/contexts/ThemeContext';
+import StripePaymentModal from '@/components/StripePaymentModal';
 
 interface Flight {
   id: string;
@@ -45,6 +47,12 @@ export default function BookingDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const [payment, setPayment] = useState<any>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [showStripeModal, setShowStripeModal] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -63,6 +71,15 @@ export default function BookingDetailsPage() {
         const data = await bookingService.getBookingById(bookingId);
         setBooking(data);
         setError(null);
+
+        // Fetch payment details for this booking
+        try {
+          const paymentData = await paymentApi.getPaymentByBookingId(bookingId);
+          setPayment(paymentData);
+        } catch (paymentError) {
+          console.error('Error fetching payment details:', paymentError);
+          // We don't set an error here as the booking might not have a payment yet
+        }
       } catch (err: any) {
         console.error('Error fetching booking details:', err);
         setError(err.message || 'Failed to load booking details. Please try again later.');
@@ -140,6 +157,62 @@ export default function BookingDetailsPage() {
     }
   };
 
+  const handleConfirmPayment = () => {
+    // Show the Stripe payment modal first
+    setShowStripeModal(true);
+  };
+
+  const processPaymentAfterStripe = async () => {
+    setIsProcessingPayment(true);
+    
+    try {
+      // Check if booking exists before accessing its properties
+      if (!booking) {
+        throw new Error('Booking details not found');
+      }
+      
+      // If we don't have a payment yet, create one
+      let paymentToProcess = payment;
+      
+      if (!paymentToProcess) {
+        // Create a new payment using the API
+        paymentToProcess = await paymentApi.createPayment({
+          bookingId: booking.id,
+          flightId: booking.flight.id,
+          amount: booking.total_amount,
+          passengers: booking.number_of_seats,
+        });
+        
+        setPayment(paymentToProcess);
+      }
+      
+      // Process the payment using the API
+      const processedPayment = await paymentApi.processPayment(paymentToProcess.id, {
+        paymentMethod: 'credit_card',
+        cardBrand: 'Visa',
+        last4: '4242',
+      });
+      
+      // Update booking status to confirmed
+      await bookingService.confirmBooking(booking.id);
+      
+      // Update local state
+      setBooking(prev => prev ? { ...prev, status: 'confirmed' } : null);
+      setPayment(processedPayment);
+      setPaymentSuccess(true);
+      
+      // Redirect to confirmation page after a short delay
+      setTimeout(() => {
+        router.push(`/booking-confirmation/${booking.id}`);
+      }, 2000);
+    } catch (err: any) {
+      console.error('Payment processing error:', err);
+      setError(err.message || 'Failed to process payment');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   // Show loading state
   if (authLoading || isLoading) {
     return (
@@ -185,6 +258,17 @@ export default function BookingDetailsPage() {
     );
   }
 
+  const departureDate = new Date(booking.flight.departure_time);
+  const arrivalDate = new Date(booking.flight.arrival_time);
+  
+  // Calculate flight duration
+  const durationMs = arrivalDate.getTime() - departureDate.getTime();
+  const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+  const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  const isPaid = payment && payment.status === 'completed';
+  const isRefunded = payment && payment.status === 'refunded';
+  
   return (
     <>
       <div className="max-w-4xl mx-auto py-8">
@@ -196,7 +280,7 @@ export default function BookingDetailsPage() {
         >
           <button
             onClick={() => router.push('/bookings')}
-            className="flex items-center text-white/60 hover:text-white transition-colors"
+            className={`flex items-center text-white/60 hover:text-white transition-colors ${isDark ? 'text-white/70 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -209,7 +293,7 @@ export default function BookingDetailsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="glass-effect rounded-xl p-8 neon-border"
+          className={`glass-effect rounded-xl p-8 neon-border ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}
         >
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
@@ -346,9 +430,13 @@ export default function BookingDetailsPage() {
           <div className="flex justify-end space-x-4">
             {booking.status.toLowerCase() === 'pending' && (
               <button
-                className="px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90 rounded-lg transition-all"
+                onClick={handleConfirmPayment}
+                disabled={isProcessingPayment}
+                className={`px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90 rounded-lg transition-all ${
+                  isProcessingPayment ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               >
-                Confirm Payment
+                {isProcessingPayment ? 'Processing...' : 'Confirm Payment'}
               </button>
             )}
             
@@ -411,6 +499,29 @@ export default function BookingDetailsPage() {
           </div>
         </div>
       </Modal>
+
+      {paymentSuccess && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-6 p-4 rounded-lg ${isDark ? 'bg-green-900/50' : 'bg-green-100'} text-center`}
+        >
+          <h2 className="text-xl font-bold mb-2 text-green-500">Payment Successful!</h2>
+          <p className={isDark ? 'text-white/80' : 'text-green-700'}>
+            Your payment has been processed successfully. Redirecting to confirmation page...
+          </p>
+        </motion.div>
+      )}
+
+      <StripePaymentModal
+        isOpen={showStripeModal}
+        onClose={() => setShowStripeModal(false)}
+        onSuccess={() => {
+          setShowStripeModal(false);
+          processPaymentAfterStripe();
+        }}
+        amount={booking?.total_amount || 0}
+      />
     </>
   );
 } 
