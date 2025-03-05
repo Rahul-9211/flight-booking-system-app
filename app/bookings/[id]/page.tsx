@@ -124,6 +124,22 @@ export default function BookingDetailsPage() {
     }
   };
 
+  // Add this function to calculate flight duration
+  const calculateFlightDuration = (departureTime: string, arrivalTime: string) => {
+    try {
+      const departure = new Date(departureTime);
+      const arrival = new Date(arrivalTime);
+      const durationMs = arrival.getTime() - departure.getTime();
+      
+      const hours = Math.floor(durationMs / (1000 * 60 * 60));
+      const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      return `${hours}h ${minutes}m`;
+    } catch (error) {
+      return 'Duration unavailable';
+    }
+  };
+
   // Show loading state
   if (authLoading || isLoading) {
     return (
@@ -212,36 +228,96 @@ export default function BookingDetailsPage() {
           <div className="mb-8">
             <div className="bg-white/5 rounded-lg p-6 mb-6">
               <h2 className="text-xl font-bold mb-4">Flight Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm text-white/60 mb-2">Flight</h3>
-                  <p className="font-medium">{booking.flight.airline} • {booking.flight.flight_number}</p>
-                  <p className="text-sm text-white/60 mt-1">Status: <span className="capitalize">{booking.flight.status}</span></p>
+              
+              {/* Flight header with airline and status */}
+              <div className="flex flex-col md:flex-row justify-between items-start mb-6">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-xl font-bold mr-3">
+                    {booking.flight.airline.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{booking.flight.airline}</h3>
+                    <p className="text-white/60">Flight {booking.flight.flight_number}</p>
+                  </div>
                 </div>
+                
+                <div className="mt-4 md:mt-0 flex items-center">
+                  <div className={`px-3 py-1 rounded-full text-sm ${
+                    booking.flight.status === 'scheduled' ? 'bg-green-500/20 text-green-400' :
+                    booking.flight.status === 'delayed' ? 'bg-yellow-500/20 text-yellow-400' :
+                    booking.flight.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                    'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    <span className="capitalize">{booking.flight.status}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Flight route visualization */}
+              <div className="mb-6">
+                <div className="relative py-6">
+                  <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-white/10"></div>
+                  
+                  <div className="flex justify-between relative z-10">
+                    <div className="text-center">
+                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 110-12 6 6 0 010 12z" />
+                        </svg>
+                      </div>
+                      <p className="font-bold text-xl">{booking.flight.origin}</p>
+                      <p className="text-sm text-white/60">{formatDate(booking.flight.departure_time)}</p>
+                    </div>
+                    
+                    <div className="text-center absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white/60" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-white/60 mt-1">
+                        {calculateFlightDuration(booking.flight.departure_time, booking.flight.arrival_time)}
+                      </p>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 110-12 6 6 0 010 12z" />
+                        </svg>
+                      </div>
+                      <p className="font-bold text-xl">{booking.flight.destination}</p>
+                      <p className="text-sm text-white/60">{formatDate(booking.flight.arrival_time)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Flight details */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <h3 className="text-sm text-white/60 mb-2">Price</h3>
                   <p className="font-medium">${booking.flight.price.toFixed(2)} per seat</p>
+                  <p className="text-sm text-white/60 mt-1">Total: ${booking.total_amount.toFixed(2)}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm text-white/60 mb-2">Seats</h3>
+                  <p className="font-medium">{booking.number_of_seats} seat(s) booked</p>
                   <p className="text-sm text-white/60 mt-1">{booking.flight.available_seats} seats available</p>
                 </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <div className="flex flex-col md:flex-row justify-between">
-                  <div className="mb-4 md:mb-0">
-                    <h3 className="text-sm text-white/60 mb-1">Departure</h3>
-                    <p className="text-2xl font-bold">{booking.flight.origin}</p>
-                    <p className="text-sm text-white/60">{formatDate(booking.flight.departure_time)}</p>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="w-32 h-px bg-white/20 relative mt-8">
-                      <div className="absolute -top-2 right-0">✈️</div>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm text-white/60 mb-1">Arrival</h3>
-                    <p className="text-2xl font-bold">{booking.flight.destination}</p>
-                    <p className="text-sm text-white/60">{formatDate(booking.flight.arrival_time)}</p>
-                  </div>
+                
+                <div>
+                  <h3 className="text-sm text-white/60 mb-2">Booking Status</h3>
+                  <p className={`font-medium ${
+                    booking.status === 'confirmed' ? 'text-green-400' :
+                    booking.status === 'pending' ? 'text-yellow-400' :
+                    booking.status === 'cancelled' ? 'text-red-400' :
+                    'text-white'
+                  }`}>
+                    <span className="capitalize">{booking.status}</span>
+                  </p>
+                  <p className="text-sm text-white/60 mt-1">Ref: {booking.booking_reference}</p>
                 </div>
               </div>
             </div>

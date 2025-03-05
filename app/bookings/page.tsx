@@ -98,6 +98,22 @@ export default function BookingsPage() {
     }
   };
 
+  // Add this function after the getStatusColor function
+  const calculateFlightDuration = (departureTime: string, arrivalTime: string) => {
+    try {
+      const departure = new Date(departureTime);
+      const arrival = new Date(arrivalTime);
+      const durationMs = arrival.getTime() - departure.getTime();
+      
+      const hours = Math.floor(durationMs / (1000 * 60 * 60));
+      const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      return `${hours}h ${minutes}m`;
+    } catch (error) {
+      return 'Duration unavailable';
+    }
+  };
+
   // Handle booking cancellation
   const openCancelModal = (id: string) => {
     setBookingToCancel(id);
@@ -179,9 +195,14 @@ export default function BookingsPage() {
                 >
                   <div className="flex flex-col md:flex-row justify-between mb-4">
                     <div>
-                      <h2 className="text-xl font-bold mb-1">
-                        {booking.flight.origin} → {booking.flight.destination}
-                      </h2>
+                      <div className="flex items-center mb-2">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold mr-2">
+                          {booking.flight.airline.charAt(0)}
+                        </div>
+                        <h2 className="text-xl font-bold">
+                          {booking.flight.origin} → {booking.flight.destination}
+                        </h2>
+                      </div>
                       <p className="text-white/60">
                         Booking Reference: <span className="font-mono">{booking.booking_reference}</span>
                       </p>
@@ -201,16 +222,19 @@ export default function BookingsPage() {
                       <p className="font-medium">{booking.flight.airline} • {booking.flight.flight_number}</p>
                       <div className="flex items-center mt-2">
                         <div className="flex-1">
-                          <p className="text-2xl font-bold">{booking.flight.origin}</p>
+                          <p className="text-lg font-bold">{booking.flight.origin}</p>
                           <p className="text-sm text-white/60">{formatDate(booking.flight.departure_time)}</p>
                         </div>
                         <div className="px-4">
                           <div className="w-16 h-px bg-white/20 relative">
                             <div className="absolute -top-2 right-0">✈️</div>
+                            <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-xs text-white/60">
+                              {calculateFlightDuration(booking.flight.departure_time, booking.flight.arrival_time)}
+                            </div>
                           </div>
                         </div>
                         <div className="flex-1">
-                          <p className="text-2xl font-bold">{booking.flight.destination}</p>
+                          <p className="text-lg font-bold">{booking.flight.destination}</p>
                           <p className="text-sm text-white/60">{formatDate(booking.flight.arrival_time)}</p>
                         </div>
                       </div>
@@ -225,7 +249,15 @@ export default function BookingsPage() {
 
                     <div>
                       <h3 className="text-sm text-white/60 mb-1">Flight Status</h3>
-                      <p className="capitalize">{booking.flight.status}</p>
+                      <div className="flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          booking.flight.status === 'scheduled' ? 'bg-green-400' :
+                          booking.flight.status === 'delayed' ? 'bg-yellow-400' :
+                          booking.flight.status === 'cancelled' ? 'bg-red-400' :
+                          'bg-blue-400'
+                        }`}></div>
+                        <p className="capitalize">{booking.flight.status}</p>
+                      </div>
                       {booking.flight.status === 'scheduled' && (
                         <p className="text-sm text-white/60 mt-1">
                           {booking.flight.available_seats} seats available
@@ -306,4 +338,4 @@ export default function BookingsPage() {
       </Modal>
     </>
   );
-} 
+}

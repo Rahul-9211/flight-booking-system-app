@@ -263,18 +263,33 @@ export const authService = {
 
 // Flight services
 export const flightService = {
-  searchFlights: (params: Record<string, string>) => {
-    // For demo purposes, return mock data
-    return Promise.resolve({
-      data: generateMockFlights(params)
-    });
+  searchFlights: async (params: Record<string, string>) => {
+    try {
+      const response = await api.get('/flights', { params });
+      return response;
+    } catch (error) {
+      console.error('Error searching flights:', error);
+      throw error;
+    }
   },
-  getFlightById: (id: string) => {
-    // For demo purposes, return a mock flight
-    return Promise.resolve({
-      data: generateMockFlight(id)
-    });
+  getFlightById: async (id: string) => {
+    try {
+      const response = await api.get(`/flights/${id}`);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching flight ${id}:`, error);
+      throw error;
+    }
   },
+  getAllFlights: async () => {
+    try {
+      const response = await api.get('/flights');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all flights:', error);
+      throw error;
+    }
+  }
 };
 
 // Booking services
