@@ -294,7 +294,15 @@ export const flightService = {
 
 // Booking services
 export const bookingService = {
-  createBooking: (bookingData: any) => api.post('/bookings', bookingData),
+  createBooking: async (bookingData: any) => {
+    try {
+      const response = await api.post('/bookings', bookingData);
+      return response;
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      throw error;
+    }
+  },
   getUserBookings: async () => {
     try {
       const response = await api.get('/bookings');

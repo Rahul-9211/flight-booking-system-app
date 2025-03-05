@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useAuthStore } from '@/store/authStore';
+import { bookingService } from '@/lib/api';
 
 interface Flight {
   id: string;
@@ -33,6 +35,8 @@ export default function FlightDetailPage() {
   const [bookingError, setBookingError] = useState<string | null>(null);
   
   const flightId = params.id as string;
+  
+  const { isAuthenticated } = useAuthStore();
   
   useEffect(() => {
     const fetchFlightDetails = async () => {
@@ -103,20 +107,29 @@ export default function FlightDetailPage() {
   };
   
   const handleBooking = async () => {
+    if (!isAuthenticated) {
+      router.push(`/signin?redirect=/flights/${flightId}`);
+      return;
+    }
+    
     setBookingLoading(true);
     setBookingError(null);
     
     try {
-      // In a real app, we would call the API
-      // await bookingService.createBooking({...});
+      // Create the booking with the API
+      const bookingData = {
+        flight_id: flightId,
+        number_of_seats: numberOfSeats,
+        payment_method: "credit_card" // You can make this dynamic later
+      };
       
-      // For demo, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await bookingService.createBooking(bookingData);
       
-      // Redirect to a mock booking
-      router.push(`/bookings/BOOK-${Math.floor(Math.random() * 10000)}`);
+      // Redirect to the booking details page
+      router.push(`/bookings/${response.data.id}`);
     } catch (err: any) {
-      setBookingError('Failed to create booking');
+      console.error('Booking error:', err);
+      setBookingError(err.message || 'Failed to create booking. Please try again.');
     } finally {
       setBookingLoading(false);
     }
