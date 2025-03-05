@@ -64,21 +64,30 @@ export default function SignInPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear previous errors
+    // Clear any previous errors
     setFormError(null);
     clearError();
     
     // Validate form
-    if (!validateForm()) return;
+    if (!formData.email.trim()) {
+      setFormError('Email is required');
+      return;
+    }
+    
+    if (!formData.password.trim()) {
+      setFormError('Password is required');
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
       await login(formData.email, formData.password);
-      // The redirect will happen in the useEffect hook
+      router.push(redirect);
     } catch (err: any) {
-      setFormError(err.message || 'Invalid email or password. Please try again.');
-      console.error('Login error:', err);
+      // Display the error message from the API
+      setFormError(err.message || 'Sign in failed. Please try again.');
+      console.error('Sign in error:', err);
     } finally {
       setIsSubmitting(false);
     }

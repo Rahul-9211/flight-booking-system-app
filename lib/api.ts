@@ -24,6 +24,54 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Add response interceptor to handle 401 errors globally
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If the error is 401 and we haven't tried to refresh the token yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Check if we have a refresh token
+        const refreshToken = localStorage.getItem('refreshToken');
+        
+        if (refreshToken) {
+          console.log('Attempting to refresh token...');
+          
+          // Try to refresh the token
+          const response = await authService.refreshToken(refreshToken);
+          const { token } = response.data;
+          
+          // Update the token in localStorage
+          localStorage.setItem('token', token);
+          
+          // Update the Authorization header
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          
+          // Retry the original request
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        
+        // Clear auth state on refresh failure
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          
+          // Redirect to login page if we're in the browser
+          window.location.href = '/signin?redirect=' + window.location.pathname;
+        }
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Auth services
 export const authService = {
   signin: async (credentials: { email: string; password: string }) => {
@@ -45,15 +93,45 @@ export const authService = {
     } catch (error: any) {
       console.error('Signin error:', error);
       
-      // Enhanced error handling for real API responses
+      // Enhanced error handling with specific error messages
       if (error.response) {
-        const errorMessage = error.response.data?.error_description || 
-                            error.response.data?.message || 
-                            'Authentication failed';
-        throw new Error(errorMessage);
+        // Server responded with an error status
+        const status = error.response.status;
+        const responseData = error.response.data;
+        
+        if (status === 400) {
+          if (responseData.message?.includes('Invalid login credentials')) {
+            throw new Error('Invalid email or password. Please try again.');
+          } else if (responseData.message?.includes('Email not confirmed')) {
+            throw new Error('Please verify your email address before signing in.');
+          } else {
+            throw new Error(responseData.message || 'Invalid request. Please check your information.');
+          }
+        } else if (status === 401) {
+          // Handle 401 Unauthorized errors
+          console.log('401 Unauthorized error details:', responseData);
+          
+          if (responseData.error === 'invalid_grant') {
+            throw new Error('Invalid email or password. Please try again.');
+          } else if (responseData.message?.includes('Invalid token')) {
+            throw new Error('Your session has expired. Please sign in again.');
+          } else if (responseData.message?.includes('API key')) {
+            throw new Error('Authentication error. Please contact support.');
+          } else {
+            throw new Error(responseData.message || 'Authentication failed. Please check your credentials.');
+          }
+        } else if (status === 404) {
+          throw new Error('User not found. Please check your email or sign up for a new account.');
+        } else if (status === 429) {
+          throw new Error('Too many sign-in attempts. Please try again later.');
+        } else {
+          throw new Error(responseData.message || 'Authentication failed. Please try again later.');
+        }
       } else if (error.request) {
-        throw new Error('No response from server. Please check your internet connection.');
+        // Request was made but no response received
+        throw new Error('No response from server. Please check your internet connection and try again.');
       } else {
+        // Error setting up the request
         throw new Error('Error setting up request: ' + error.message);
       }
     }
