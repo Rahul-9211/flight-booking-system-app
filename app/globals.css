@@ -1,13 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050816;
+  --foreground: #ffffff;
+  --primary: #00e5ff;
+  --secondary: #7b68ee;
+  --accent: #ff00ff;
+  --card-bg: rgba(13, 12, 34, 0.8);
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.37);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -22,5 +32,88 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(123, 104, 238, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(0, 229, 255, 0.1) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+.futuristic-text {
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.glow {
+  text-shadow: 0 0 5px var(--primary),
+               0 0 10px var(--primary);
+}
+
+.glow-purple {
+  text-shadow: 0 0 5px var(--secondary),
+               0 0 10px var(--secondary);
+}
+
+.glass-effect {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
+}
+
+.neon-border {
+  box-shadow: 0 0 5px var(--primary),
+              0 0 10px var(--primary),
+              inset 0 0 5px var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: translateY(-5px) scale(1.01);
+}
+
+.animated-gradient-text {
+  background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent), var(--primary));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-animation 8s ease infinite;
+}
+
+@keyframes gradient-animation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 229, 255, 0.5) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 229, 255, 0.5);
+  border-radius: 20px;
+  border: transparent;
+}
+
+/* Radial gradient background */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--arg-from), var(--arg-via), var(--arg-to));
 }
