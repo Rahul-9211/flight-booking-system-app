@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import TestBackground from "@/components/TestBackground";
+import LoadUser from '@/components/LoadUser';
 // Temporarily comment out the problematic component
 // import SpaceBackground from "@/components/SpaceBackground";
 
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-[#050816] text-white`}
       >
+        <LoadUser />
         {/* <SpaceBackground /> */}
         <TestBackground />
         <div className="relative z-10">

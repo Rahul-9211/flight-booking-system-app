@@ -33,7 +33,8 @@ export default function SignUpPage() {
       await signup(formData);
       router.push('/');
     } catch (err: any) {
-      setError('Registration failed. Please try again.');
+      setError('Registration failed. Please check your information and try again.');
+      console.error('Signup error:', err);
     } finally {
       setLoading(false);
     }

@@ -1,64 +1,83 @@
+'use client';
+
 import { create } from 'zustand';
 import { authService } from '@/lib/api';
 import { jwtDecode } from 'jwt-decode';
 
 interface User {
-  id?: string;
+  id: string;
   email: string;
-  full_name: string;
+  full_name?: string;
   phone_number?: string;
+  created_at?: string;
+  last_sign_in_at?: string;
 }
 
 interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (userData: { email: string; password: string; full_name: string; phone_number?: string }) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<any>;
+  signup: (userData: { email: string; password: string; full_name: string; phone_number?: string }) => Promise<any>;
+  logout: () => Promise<void>;
   loadUser: () => Promise<void>;
+  clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
+  refreshToken: typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null,
   isAuthenticated: typeof window !== 'undefined' ? !!localStorage.getItem('token') : false,
   isLoading: false,
   error: null,
+  
+  clearError: () => set({ error: null }),
   
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     
     try {
-      // In a real app, we would call the API
-      // const response = await authService.signin({ email, password });
-      // const { token, user } = response.data;
+      const response = await authService.signin({ email, password });
+      const { token, refresh_token, user } = response.data;
       
-      // For demo, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const responseUserProfile = await authService.getProfile(token);
+      console.log('User profile:', responseUserProfile.data);
       
-      // Mock token and user
-      const token = 'mock-jwt-token';
-      const user = {
-        id: 'user-123',
-        email,
-        full_name: 'Demo User',
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refresh_token);
+      }
+      
+      // Extract user profile from the response
+      const userProfile = {
+        id: user.id,
+        email: user.email,
+        full_name: responseUserProfile.data.full_name,
+        phone_number: user.phone || '',
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at
       };
-      
-      localStorage.setItem('token', token);
+      console.log('User profile:', userProfile);
       
       set({ 
         token, 
-        user, 
+        refreshToken: refresh_token,
+        user: userProfile, 
         isAuthenticated: true, 
-        isLoading: false 
+        isLoading: false,
+        error: null
       });
+      
+      return user;
     } catch (error: any) {
       set({ 
-        error: error.response?.data?.message || 'Authentication failed', 
-        isLoading: false 
+        error: error.message || 'Authentication failed', 
+        isLoading: false,
+        isAuthenticated: false
       });
       throw error;
     }
@@ -68,83 +87,156 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // In a real app, we would call the API
-      // const response = await authService.signup(userData);
-      // const { token, user } = response.data;
+      const response = await authService.signup(userData);
+      const { token, refresh_token, user } = response.data;
       
-      // For demo, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refresh_token);
+      }
       
-      // Mock token and user
-      const token = 'mock-jwt-token';
-      const user = {
-        id: 'user-123',
-        email: userData.email,
+      // Extract user profile from the response
+      const userProfile = {
+        id: user.id,
+        email: user.email,
         full_name: userData.full_name,
-        phone_number: userData.phone_number,
+        phone_number: userData.phone_number || '',
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at
       };
-      
-      localStorage.setItem('token', token);
       
       set({ 
         token, 
-        user, 
+        refreshToken: refresh_token,
+        user: userProfile, 
         isAuthenticated: true, 
-        isLoading: false 
+        isLoading: false,
+        error: null
       });
+      
+      return user;
     } catch (error: any) {
       set({ 
-        error: error.response?.data?.message || 'Registration failed', 
-        isLoading: false 
+        error: error.message || 'Registration failed', 
+        isLoading: false,
+        isAuthenticated: false
       });
       throw error;
     }
   },
   
-  logout: () => {
-    localStorage.removeItem('token');
-    set({ 
-      token: null, 
-      user: null, 
-      isAuthenticated: false 
-    });
+  logout: async () => {
+    set({ isLoading: true });
+    
+    try {
+      // Call the signOut API
+      await authService.signOut();
+      
+      // Clear local storage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      }
+      
+      // Reset state
+      set({ 
+        token: null,
+        refreshToken: null,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null
+      });
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      
+      // Even if the API call fails, we should still clear the local state
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      }
+      
+      set({ 
+        token: null,
+        refreshToken: null,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: error.message || 'Failed to sign out'
+      });
+    }
   },
   
   loadUser: async () => {
-    const token = localStorage.getItem('token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+    
     if (!token) {
-      set({ isAuthenticated: false, user: null });
+      set({ isAuthenticated: false, user: null, isLoading: false });
       return;
     }
     
     set({ isLoading: true });
     
     try {
-      // In a real app, we would call the API
-      // const response = await authService.getProfile();
+      // For debugging
+      console.log('Loading user with token:', token?.substring(0, 10) + '...' || 'no token');
       
-      // For demo, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Check if token is expired
+      let currentToken = token;
+      let currentRefreshToken = refreshToken;
       
-      // Mock user
-      const user = {
-        id: 'user-123',
-        email: 'user@example.com',
-        full_name: 'Demo User',
-      };
+      try {
+        const decoded: any = token ? jwtDecode(token) : null;
+        const currentTime = Date.now() / 1000;
+        
+        // If token is expired and we have a refresh token, try to refresh
+        if (decoded && decoded.exp < currentTime && refreshToken) {
+          console.log('Token expired, refreshing...');
+          const refreshResponse = await authService.refreshToken(refreshToken);
+          currentToken = refreshResponse.data.token;
+          currentRefreshToken = refreshResponse.data.refresh_token;
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('token', currentToken);
+            // localStorage.setItem('refreshToken', currentRefreshToken);
+          }
+          
+          set({ 
+            token: currentToken,
+            refreshToken: currentRefreshToken
+          });
+        }
+      } catch (decodeError) {
+        console.error('Token decode error:', decodeError);
+      }
+      
+      // Get user profile with the current token
+      const response = await authService.getProfile(token);
+      console.log('User profile loaded:', response.data);
       
       set({ 
-        user, 
+        user: response.data, 
         isAuthenticated: true, 
-        isLoading: false 
+        isLoading: false,
+        error: null
       });
-    } catch (error) {
-      localStorage.removeItem('token');
+    } catch (error: any) {
+      console.error('Load user error:', error);
+      
+      // If there's an authentication error, clear the tokens
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      }
+      
       set({ 
-        token: null, 
+        token: null,
+        refreshToken: null,
         isAuthenticated: false, 
         user: null, 
-        isLoading: false 
+        isLoading: false,
+        error: error.message || 'Failed to load user profile'
       });
     }
   }

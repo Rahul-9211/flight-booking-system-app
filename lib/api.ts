@@ -1,13 +1,15 @@
 import axios from 'axios';
 
 // Base API URL - replace with your actual API URL when available
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fstydhiwdzwsjgkbaomz.supabase.co/auth/v1';
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-supabase-anon-key';
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
   },
 });
 
@@ -24,11 +26,161 @@ api.interceptors.request.use((config) => {
 
 // Auth services
 export const authService = {
-  signin: (data: { email: string; password: string }) => 
-    api.post('/auth/signin', data),
-  signup: (data: { email: string; password: string; full_name: string; phone_number?: string }) => 
-    api.post('/auth/signup', data),
-  getProfile: () => api.get('/auth/profile'),
+  signin: async (credentials: { email: string; password: string }) => {
+    try {
+      // Make a real API call to the authentication endpoint
+      const response = await api.post('/auth/signin', {
+        email: credentials.email,
+        password: credentials.password,
+      });
+      
+      // Process the response from the real API
+      return {
+        data: {
+          token: response.data.session.access_token,
+          refresh_token: response.data.session.refresh_token,
+          user: response.data.user
+        }
+      };  
+    } catch (error: any) {
+      console.error('Signin error:', error);
+      
+      // Enhanced error handling for real API responses
+      if (error.response) {
+        const errorMessage = error.response.data?.error_description || 
+                            error.response.data?.message || 
+                            'Authentication failed';
+        throw new Error(errorMessage);
+      } else if (error.request) {
+        throw new Error('No response from server. Please check your internet connection.');
+      } else {
+        throw new Error('Error setting up request: ' + error.message);
+      }
+    }
+  },
+  
+  signup: async (userData: { 
+    email: string; 
+    password: string; 
+    full_name: string; 
+    phone_number?: string 
+  }) => {
+    try {
+      // First, create the user account
+      const signupResponse = await api.post('/auth/signup', {
+        email: userData.email,
+        password: userData.password,
+        data: {
+          full_name: userData.full_name,
+          phone_number: userData.phone_number || ''
+        }
+      });
+      
+      // Then sign in to get the session
+      const signinResponse = await authService.signin({
+        email: userData.email,
+        password: userData.password
+      });
+      
+      return signinResponse;
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      
+      // Enhanced error handling
+      if (error.response) {
+        const errorMessage = error.response.data?.error_description || 
+                            error.response.data?.message || 
+                            'Registration failed';
+        throw new Error(errorMessage);
+      } else if (error.request) {
+        throw new Error('No response from server. Please check your internet connection.');
+      } else {
+        throw new Error('Error setting up request: ' + error.message);
+      }
+    }
+  },
+  
+    getProfile: async (token: string) => {
+    try {
+      console.log('Token:', token);
+      // Make a real API call to get the user profile
+      const response = await api.get('/auth/profile',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );  
+      console.log('Profile response:', response.data);
+      // Process the response from the real API
+      return {
+        data: {
+          id: response.data.id,
+          email: response.data.email,
+          full_name: response.data.full_name,
+          phone_number: response.data.phone || '',
+          created_at: response.data.created_at,
+          last_sign_in_at: response.data.last_sign_in_at
+        }
+      };
+    } catch (error: any) {
+      console.error('Get profile error:', error);
+      
+      if (error.response && error.response.status === 401) {
+        throw new Error('Session expired. Please sign in again.');
+      } else if (error.response) {
+        throw new Error(error.response.data?.message || 'Failed to load profile');
+      } else if (error.request) {
+        throw new Error('No response from server. Please check your internet connection.');
+      } else {
+        throw new Error('Error setting up request: ' + error.message);
+      }
+    }
+  },
+  
+  refreshToken: async (refreshToken: string) => {
+    try {
+      const response = await api.post('/auth/v1/token?grant_type=refresh_token', {
+        refresh_token: refreshToken
+      });
+      
+      return {
+        data: {
+          token: response.data.access_token,
+          refresh_token: response.data.refresh_token,
+          user: response.data.user
+        }
+      };
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      throw error;
+    }
+  },
+  
+  signOut: async () => {
+    try {
+      // Make a real API call to sign out
+      // await api.post('/auth/v1/logout', {});
+      
+      // Clear local storage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Sign out error:', error);
+      
+      // Even if the API call fails, clear local storage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      }
+      
+      throw error;
+    }
+  }
 };
 
 // Flight services
