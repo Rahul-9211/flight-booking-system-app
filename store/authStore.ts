@@ -89,6 +89,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authService.signup(userData);
       const { token, refresh_token, user } = response.data;
+
+      const responseUserProfile = await authService.getProfile(token);
       
       if (typeof window !== 'undefined') {
         localStorage.setItem('token', token);
@@ -99,8 +101,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const userProfile = {
         id: user.id,
         email: user.email,
-        full_name: userData.full_name,
-        phone_number: userData.phone_number || '',
+        full_name: responseUserProfile.data.full_name,
+        phone_number: user.phone || '',
         created_at: user.created_at,
         last_sign_in_at: user.last_sign_in_at
       };

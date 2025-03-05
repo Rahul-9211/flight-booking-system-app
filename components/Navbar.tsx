@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,12 +13,27 @@ export default function Navbar() {
   const { isAuthenticated, user, logout, isLoading } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menus when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsUserMenuOpen(false);
   }, [pathname]);
+
+  // Close the menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -29,6 +44,8 @@ export default function Navbar() {
     }
   };
 
+  if (!isAuthenticated || !user) return null;
+  
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-md bg-black/30 border-b border-white/10">
       <div className="container mx-auto px-4">
@@ -72,90 +89,52 @@ export default function Navbar() {
             <div className="ml-4 flex items-center space-x-2">
               <ThemeToggle />
               
-              {isAuthenticated ? (
-                <div className="relative">
-                  <motion.button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-white/5"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white">
-                      {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-white/5"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white">
+                    {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="hidden md:inline">{user.full_name || user.email.split('@')[0]}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-black/80 backdrop-blur-sm border border-white/10 rounded-lg shadow-lg z-50">
+                    <div className="p-3 border-b border-white/10">
+                      <p className="font-medium">{user.full_name}</p>
+                      <p className="text-sm text-white/60 truncate">{user.email}</p>
                     </div>
-                    <span className="hidden sm:inline-block">{user?.full_name || 'User'}</span>
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      className={`h-4 w-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </motion.button>
-                  
-                  <AnimatePresence>
-                    {isUserMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute right-0 mt-2 w-48 bg-black/80 backdrop-blur-md border border-white/10 rounded-lg shadow-lg overflow-hidden z-50"
-                      >
-                        <div className="py-1">
-                          <Link
-                            href="/profile"
-                            className="block px-4 py-2 text-sm hover:bg-white/5"
-                            onClick={() => setIsUserMenuOpen(false)}
-                          >
-                            Profile
-                          </Link>
-                          <Link
-                            href="/bookings"
-                            className="block px-4 py-2 text-sm hover:bg-white/5"
-                            onClick={() => setIsUserMenuOpen(false)}
-                          >
-                            My Bookings
-                          </Link>
-                          <button
-                            onClick={handleSignOut}
-                            className="block w-full text-left px-4 py-2 text-sm hover:bg-white/5 text-red-400"
-                          >
-                            Sign Out
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <div className="flex space-x-2">
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Link 
-                      href="/signin" 
-                      className={`px-4 py-2 rounded-lg ${pathname === '/signin' ? 'bg-white/10' : 'hover:bg-white/5'}`}
-                    >
-                      Sign In
-                    </Link>
-                  </motion.div>
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Link 
-                      href="/signup" 
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white"
-                    >
-                      Sign Up
-                    </Link>
-                  </motion.div>
-                </div>
-              )}
+                    <ul>
+                      <li>
+                        <Link href="/profile" className="block px-4 py-2 hover:bg-white/5" onClick={() => setIsUserMenuOpen(false)}>
+                          Profile
+                        </Link>
+                      </li>
+                      <li>
+                        <Link href="/bookings" className="block px-4 py-2 hover:bg-white/5" onClick={() => setIsUserMenuOpen(false)}>
+                          My Bookings
+                        </Link>
+                      </li>
+                      <li>
+                        <button 
+                          onClick={() => {
+                            handleSignOut();
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-red-400 hover:bg-red-500/10"
+                        >
+                          Sign Out
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

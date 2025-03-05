@@ -280,8 +280,33 @@ export const flightService = {
 // Booking services
 export const bookingService = {
   createBooking: (bookingData: any) => api.post('/bookings', bookingData),
-  getUserBookings: () => api.get('/bookings'),
-  getBookingById: (id: string) => api.get(`/bookings/${id}`),
+  getUserBookings: async () => {
+    try {
+      const response = await api.get('/bookings');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      throw error;
+    }
+  },
+  getBookingById: async (id: string) => {
+    try {
+      // Get token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      // Make API call with token in header
+      const response = await api.get(`/bookings/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching booking ${id}:`, error);
+      throw error;
+    }
+  },
   cancelBooking: (id: string) => api.put(`/bookings/${id}/cancel`),
   confirmBooking: (id: string) => api.put(`/bookings/${id}/confirm`),
 };
