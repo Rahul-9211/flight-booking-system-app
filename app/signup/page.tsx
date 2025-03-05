@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
+import CountrySelector from '@/components/CountrySelector';
+import StateSelector from '@/components/StateSelector';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -18,6 +20,8 @@ export default function SignUpPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [country, setCountry] = useState('');
+  const [state, setState] = useState('');
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -113,6 +117,23 @@ export default function SignUpPage() {
               value={formData.phone_number}
               onChange={handleChange}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <CountrySelector
+              label="Country"
+              value={country}
+              onChange={setCountry}
+              placeholder="Select your country"
+            />
+            
+            <StateSelector
+              label="State/Province"
+              value={state}
+              onChange={setState}
+              countryCode={country}
+              placeholder="Select your state/province"
             />
           </div>
           
