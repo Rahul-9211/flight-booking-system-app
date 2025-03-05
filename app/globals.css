@@ -12,6 +12,16 @@
   --glass-shadow: rgba(0, 0, 0, 0.37);
 }
 
+/* Light mode overrides */
+:root.light {
+  --background: #f0f8ff;
+  --foreground: #050816;
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.1);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -37,6 +47,7 @@ body {
     radial-gradient(circle at 25% 25%, rgba(123, 104, 238, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 75% 75%, rgba(0, 229, 255, 0.1) 0%, transparent 50%);
   background-attachment: fixed;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .futuristic-text {
@@ -116,4 +127,13 @@ body {
 /* Radial gradient background */
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--arg-from), var(--arg-via), var(--arg-to));
+}
+
+/* Add this to your globals.css */
+.theme-transition,
+.theme-transition *,
+.theme-transition *:before,
+.theme-transition *:after {
+  transition: all 0.5s ease-out !important;
+  transition-delay: 0s !important;
 }

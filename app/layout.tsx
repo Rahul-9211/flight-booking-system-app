@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import { SpaceBackground } from "@/components/SpaceBackground";
+import TestBackground from "@/components/TestBackground";
+// Temporarily comment out the problematic component
+// import SpaceBackground from "@/components/SpaceBackground";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,9 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-[#050816] text-white`}
       >
-        <SpaceBackground />
+        {/* <SpaceBackground /> */}
+        <TestBackground />
         <div className="relative z-10">
           <Navbar />
           <main className="container mx-auto px-4 py-8">
