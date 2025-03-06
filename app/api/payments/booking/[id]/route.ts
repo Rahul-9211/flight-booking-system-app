@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+type ParamsType = Promise<{ id: string }>;
 // Get payment details for a specific booking
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: ParamsType }
 ) {
   try {
-    // Properly access the id from the params object
-    const bookingId = context.params.id;
+    const { id } = await params;
+    const bookingId =id;
     
     if (!bookingId) {
       return NextResponse.json(

@@ -1,22 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import PaymentForm from '@/components/PaymentForm';
 import { useTheme } from '@/contexts/ThemeContext';
 
-interface CheckoutPageProps {
-  params: {
-    flightId: string;
-  };
-  searchParams: {
-    passengers?: string;
-  };
-}
-
-export default function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
-  const { flightId } = params;
-  const passengers = parseInt(searchParams.passengers || '1');
+export default function CheckoutPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const flightId = params.flightId as string;
+  const passengers = parseInt(searchParams.get('passengers') || '1');
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+type ParamsType = Promise<{ id: string }>;
 // Refund a completed payment
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: ParamsType }
 ) {
   try {
-    const paymentId = params.id;
+    const { id } = await params;
+    const paymentId = id;
     
     // In a real app, you would process the refund through a payment gateway
     // and update the payment record in your database

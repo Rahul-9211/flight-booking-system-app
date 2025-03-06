@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { flightService } from '@/lib/api';
+type ParamsType = Promise<{ id: string }>;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: ParamsType }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json(

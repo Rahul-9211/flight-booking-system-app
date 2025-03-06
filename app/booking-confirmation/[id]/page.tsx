@@ -7,15 +7,11 @@ import Link from 'next/link';
 import { useTheme } from '@/contexts/ThemeContext';
 import ConfettiExplosion from 'react-confetti-explosion';
 import { bookingService } from '@/lib/api';
+import { useParams } from 'next/navigation';
 
-interface BookingConfirmationProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function BookingConfirmationPage({ params }: BookingConfirmationProps) {
-  const { id } = params;
+export default function BookingConfirmationPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';

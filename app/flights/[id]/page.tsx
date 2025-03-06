@@ -1,19 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import PassengerSelector from '@/components/PassengerSelector';
 import { useTheme } from '@/contexts/ThemeContext';
 import { bookingService, flightService } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
-
-interface FlightDetailsProps {
-  params: {
-    id: string;
-  };
-}
 
 interface Flight {
   id: string;
@@ -34,8 +28,9 @@ interface Flight {
   gate?: string;
 }
 
-export default function FlightDetailsPage({ params }: FlightDetailsProps) {
-  const { id } = params;
+export default function FlightDetailsPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+type ParamsType = Promise<{ id: string }>;
 // Process a pending payment
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: ParamsType }
 ) {
   try {
-    const paymentId = params.id;
+    const { id } = await params;
+    const paymentId = id;
     const paymentDetails = await req.json();
     
     // Validate the request
