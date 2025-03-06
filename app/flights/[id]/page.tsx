@@ -79,8 +79,12 @@ export default function FlightDetailsPage({ params }: FlightDetailsProps) {
           passengers: passengers
         }));
         
-        // Redirect to login page with return URL
+        // Show a modal or dialog to let the user choose between signin and signup
+        // For simplicity, we'll just redirect to signin with a return URL
         router.push(`/signin?returnUrl=/flights/${flight.id}`);
+        // Alternatively, you could add a link to signup in the UI
+        // or redirect directly to signup with:
+        // router.push(`/signup?returnUrl=/flights/${flight.id}`);
         return;
       }
       

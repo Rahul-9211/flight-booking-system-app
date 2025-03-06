@@ -325,7 +325,7 @@ export default function FlightsPage() {
               onClick={() => router.push('/flights')}
               className="px-6 py-3 bg-gradient-to-r from-primary/20 to-secondary/20 border border-white/10 rounded-lg inline-block hover:from-primary/30 hover:to-secondary/30"
             >
-              Show Demo Flights
+              Show Other Flights
             </button>
           </div>
         </motion.div>

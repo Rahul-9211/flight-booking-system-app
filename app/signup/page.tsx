@@ -1,16 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import CountrySelector from '@/components/CountrySelector';
 import StateSelector from '@/components/StateSelector';
+import { bookingService } from '@/lib/api';
+
+interface BookingIntent {
+  flightId: string;
+  passengers: number;
+}
 
 export default function SignUpPage() {
   const router = useRouter();
-  const { signup } = useAuthStore();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl') || '/';
+  const { signup, isAuthenticated, isLoading } = useAuthStore();
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -22,6 +30,52 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [country, setCountry] = useState('');
   const [state, setState] = useState('');
+  
+  // Handle post-authentication actions
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      // Check if there's a booking intent in localStorage
+      const storedBookingIntent = localStorage.getItem('bookingIntent');
+      
+      if (storedBookingIntent) {
+        try {
+          const bookingIntent: BookingIntent = JSON.parse(storedBookingIntent);
+          
+          // Create the booking
+          const createBooking = async () => {
+            try {
+              const bookingData = {
+                flight_id: bookingIntent.flightId,
+                number_of_seats: bookingIntent.passengers,
+                payment_method: "credit_card"
+              };
+              
+              const response = await bookingService.createBooking(bookingData);
+              const booking = response.data;
+              
+              // Clear the booking intent from localStorage
+              localStorage.removeItem('bookingIntent');
+              
+              // Redirect to the booking page
+              router.push(`/bookings/${booking.id}`);
+            } catch (err) {
+              console.error('Error creating booking after signup:', err);
+              // If booking creation fails, redirect to the flight details page
+              router.push(`/flights/${bookingIntent.flightId}`);
+            }
+          };
+          
+          createBooking();
+        } catch (err) {
+          console.error('Error processing booking intent:', err);
+          router.push(returnUrl);
+        }
+      } else {
+        // No booking intent, just redirect to the return URL
+        router.push(returnUrl);
+      }
+    }
+  }, [isAuthenticated, isLoading, router, returnUrl]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,7 +89,7 @@ export default function SignUpPage() {
     
     try {
       await signup(formData);
-      router.push('/');
+      // The redirect will be handled by the useEffect above
     } catch (err: any) {
       setError('Registration failed. Please check your information and try again.');
       console.error('Signup error:', err);

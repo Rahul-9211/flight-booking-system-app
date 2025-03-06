@@ -160,7 +160,7 @@ export default function HomePage() {
                 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-gradient-to-r from-primary to-secondary rounded-lg text-lg font-medium hover:opacity-90 transition-opacity text-white"
+                  className="w-full py-4 bg-gradient-to-r from-primary to-secondary rounded-lg text-lg font-medium hover:opacity-90 transition-opacity text-white cursor-pointer"
                 >
                   Search Flights
                 </button>

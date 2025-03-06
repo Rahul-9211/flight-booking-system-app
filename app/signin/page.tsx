@@ -228,7 +228,7 @@ export default function SignInPage() {
         
         <div className="mt-6 text-center text-sm text-white/60">
           Don't have an account?{' '}
-          <Link href="/signup" className="text-primary hover:underline">
+          <Link href={`/signup?returnUrl=${encodeURIComponent(returnUrl)}`} className="text-primary hover:underline">
             Sign Up
           </Link>
         </div>
