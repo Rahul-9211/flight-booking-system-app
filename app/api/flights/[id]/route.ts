@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateMockFlight } from '@/lib/api';
+import { flightService } from '@/lib/api';
 
 export async function GET(
   request: NextRequest,
@@ -8,27 +8,27 @@ export async function GET(
   try {
     const id = params.id;
     
-    // In a real application, you would fetch the flight from your database
-    // For now, we'll generate a mock flight based on the ID
-    
-    // Extract flight details from the ID (format: origin-destination-flightNumber)
-    const [origin, destination, flightNumber] = id.split('-');
-    
-    if (!origin || !destination || !flightNumber) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Invalid flight ID format' },
+        { error: 'Flight ID is required' },
         { status: 400 }
       );
     }
     
-    // Generate a mock flight with the extracted details
-    const flight = generateMockFlight(origin, destination, flightNumber);
+    const flight = await flightService.getFlightById(id);
+    
+    if (!flight) {
+      return NextResponse.json(
+        { error: 'Flight not found' },
+        { status: 404 }
+      );
+    }
     
     return NextResponse.json(flight);
   } catch (error: any) {
-    console.error('Error fetching flight details:', error);
+    console.error('Error fetching flight:', error);
     return NextResponse.json(
-      { error: error.message || 'An error occurred' },
+      { error: error.message || 'Failed to fetch flight details' },
       { status: 500 }
     );
   }

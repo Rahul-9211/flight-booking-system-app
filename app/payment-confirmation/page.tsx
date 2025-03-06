@@ -1,47 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useTheme } from '@/contexts/ThemeContext';
 import ConfettiExplosion from 'react-confetti-explosion';
-import { bookingService } from '@/lib/api';
 
-interface BookingConfirmationProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function BookingConfirmationPage({ params }: BookingConfirmationProps) {
-  const { id } = params;
+export default function PaymentConfirmationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const bookingId = searchParams.get('bookingId');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   
   const [isExploding, setIsExploding] = useState(false);
   const [countdown, setCountdown] = useState(10);
-  const [booking, setBooking] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Fetch booking details
-  useEffect(() => {
-    const fetchBooking = async () => {
-      try {
-        const data = await bookingService.getBookingById(id);
-        setBooking(data);
-      } catch (err: any) {
-        console.error('Error fetching booking:', err);
-        setError(err.message || 'Failed to load booking details');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchBooking();
-  }, [id]);
   
   // Start confetti effect when page loads
   useEffect(() => {
@@ -68,31 +42,6 @@ export default function BookingConfirmationPage({ params }: BookingConfirmationP
       router.push('/bookings');
     }
   }, [countdown, router]);
-  
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto py-12 px-4">
-        <div className="glass-effect rounded-xl p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4 text-red-400">Error</h2>
-          <p className="mb-6">{error}</p>
-          <Link 
-            href="/bookings"
-            className="px-6 py-3 bg-gradient-to-r from-primary/20 to-secondary/20 border border-white/10 rounded-lg inline-block hover:from-primary/30 hover:to-secondary/30"
-          >
-            View My Bookings
-          </Link>
-        </div>
-      </div>
-    );
-  }
   
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
@@ -137,50 +86,31 @@ export default function BookingConfirmationPage({ params }: BookingConfirmationP
             </motion.div>
           </div>
           
-          <h1 className="text-3xl font-bold mb-4 futuristic-text">BOOKING CONFIRMED</h1>
+          <h1 className="text-3xl font-bold mb-4 futuristic-text">PAYMENT SUCCESSFUL</h1>
           
           <p className="text-xl mb-6">
-            Your flight has been successfully booked!
+            Your booking has been confirmed!
           </p>
           
-          <div className="mb-6">
-            <p className="text-white/70 mb-2">Booking Reference:</p>
-            <p className="text-xl font-mono bg-white/5 py-2 px-4 rounded-lg inline-block">{id}</p>
-          </div>
-          
-          {booking && (
-            <div className="max-w-md mx-auto mb-8">
-              <div className={`p-4 rounded-lg ${isDark ? 'bg-white/5' : 'bg-gray-50'} text-left`}>
-                <h3 className="text-lg font-semibold mb-3">Booking Details</h3>
-                
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <div className="text-white/70">Flight:</div>
-                  <div>{booking.flight?.flight_number || 'N/A'}</div>
-                  
-                  <div className="text-white/70">From:</div>
-                  <div>{booking.flight?.origin || 'N/A'}</div>
-                  
-                  <div className="text-white/70">To:</div>
-                  <div>{booking.flight?.destination || 'N/A'}</div>
-                  
-                  <div className="text-white/70">Date:</div>
-                  <div>{booking.flight?.departure_time 
-                    ? new Date(booking.flight.departure_time).toLocaleDateString() 
-                    : 'N/A'}</div>
-                  
-                  <div className="text-white/70">Passengers:</div>
-                  <div>{booking.number_of_seats || 1}</div>
-                  
-                  <div className="text-white/70">Status:</div>
-                  <div className="text-green-400 font-medium">Confirmed</div>
-                </div>
-                
-                <div className="text-sm text-white/60 text-center">
-                  You will be redirected to your bookings in <span className="font-bold text-primary">{countdown}</span> seconds
-                </div>
-              </div>
+          {bookingId && (
+            <div className="mb-6">
+              <p className="text-white/70 mb-2">Booking Reference:</p>
+              <p className="text-xl font-mono bg-white/5 py-2 px-4 rounded-lg inline-block">{bookingId}</p>
             </div>
           )}
+          
+          <div className="max-w-md mx-auto mb-8">
+            <div className={`p-4 rounded-lg ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
+              <p className="mb-4">
+                We've sent a confirmation email with all the details of your booking. 
+                You can also view your booking details in the "My Bookings" section.
+              </p>
+              
+              <div className="text-sm text-white/60">
+                You will be redirected to your bookings in <span className="font-bold text-primary">{countdown}</span> seconds
+              </div>
+            </div>
+          </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
