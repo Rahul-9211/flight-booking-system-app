@@ -1,7 +1,8 @@
 'use client';
 
+import React, { Suspense } from 'react';
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import PassengerSelector from '@/components/PassengerSelector';
@@ -28,8 +29,10 @@ interface Flight {
   gate?: string;
 }
 
-export default function FlightDetailsPage() {
+// Create a component that uses useSearchParams
+function FlightDetailsContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const router = useRouter();
   const { theme } = useTheme();
@@ -352,5 +355,14 @@ export default function FlightDetailsPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function FlightDetails() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <FlightDetailsContent />
+    </Suspense>
   );
 } 

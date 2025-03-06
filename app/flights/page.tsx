@@ -1,5 +1,6 @@
 'use client';
 
+import React, { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -19,7 +20,8 @@ interface Flight {
   airline: string;
 }
 
-export default function FlightsPage() {
+// Create a component that uses useSearchParams
+function FlightsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -387,5 +389,14 @@ export default function FlightsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function Flights() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <FlightsContent />
+    </Suspense>
   );
 } 

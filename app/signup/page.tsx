@@ -1,5 +1,6 @@
 'use client';
 
+import React, { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -14,7 +15,8 @@ interface BookingIntent {
   passengers: number;
 }
 
-export default function SignUpPage() {
+// Create a component that uses useSearchParams
+function SignUpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl') || '/';
@@ -218,5 +220,14 @@ export default function SignUpPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function SignUp() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignUpContent />
+    </Suspense>
   );
 } 

@@ -1,11 +1,13 @@
 'use client';
 
+import React, { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import PaymentForm from '@/components/PaymentForm';
 import { useTheme } from '@/contexts/ThemeContext';
 
-export default function CheckoutPage() {
+// Create a component that uses useSearchParams
+function CheckoutContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const flightId = params.flightId as string;
@@ -155,5 +157,14 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function Checkout() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 } 
