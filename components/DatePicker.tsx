@@ -46,7 +46,7 @@ export default function DatePicker({
           placeholderText={placeholder}
           onCalendarOpen={() => setIsOpen(true)}
           onCalendarClose={() => setIsOpen(false)}
-          className={`w-full bg-transparent outline-none cursor-pointer ${inputTextClass}`}
+          className={`w-full bg-transparent outline-none cursor-pointer w-full ${inputTextClass}`}
           calendarClassName={darkMode ? "dark-calendar" : ""}
           dateFormat="MMMM d, yyyy"
         />
@@ -59,7 +59,13 @@ export default function DatePicker({
             background-color: ${darkMode ? '#1F2937' : '#FFFFFF'};
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
           }
-          
+            
+          .react-datepicker input{
+            width: 100%;
+          }
+          .react-datepicker-wrapper{
+            width: 100%;
+          }
           .react-datepicker__header {
             background-color: ${darkMode ? '#374151' : '#F3F4F6'};
             border-bottom: 1px solid ${darkMode ? '#4B5563' : '#E5E7EB'};

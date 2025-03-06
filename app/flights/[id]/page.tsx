@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import PassengerSelector from '@/components/PassengerSelector';
 import { useTheme } from '@/contexts/ThemeContext';
 import { bookingService, flightService } from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 
 interface FlightDetailsProps {
   params: {
@@ -38,6 +39,7 @@ export default function FlightDetailsPage({ params }: FlightDetailsProps) {
   const router = useRouter();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const { isAuthenticated, user } = useAuthStore();
   
   const [flight, setFlight] = useState<Flight | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,20 @@ export default function FlightDetailsPage({ params }: FlightDetailsProps) {
         throw new Error('Flight details not available');
       }
       
-      // Create a booking first
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        // Store booking intent in localStorage to resume after login
+        localStorage.setItem('bookingIntent', JSON.stringify({
+          flightId: flight.id,
+          passengers: passengers
+        }));
+        
+        // Redirect to login page with return URL
+        router.push(`/signin?returnUrl=/flights/${flight.id}`);
+        return;
+      }
+      
+      // User is authenticated, proceed with booking
       const bookingData = {
         flight_id: flight.id,
         number_of_seats: passengers,

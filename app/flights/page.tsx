@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { flightService } from '@/lib/api';
@@ -21,6 +21,7 @@ interface Flight {
 
 export default function FlightsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -320,7 +321,8 @@ export default function FlightsPage() {
               New Search
             </Link>
             <button
-              onClick={() => setFlights(generateMockFlights())}
+              // onClick={() => setFlights(generateMockFlights())}
+              onClick={() => router.push('/flights')}
               className="px-6 py-3 bg-gradient-to-r from-primary/20 to-secondary/20 border border-white/10 rounded-lg inline-block hover:from-primary/30 hover:to-secondary/30"
             >
               Show Demo Flights

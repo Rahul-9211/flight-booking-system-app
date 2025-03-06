@@ -5,11 +5,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
+import { bookingService } from '@/lib/api';
+
+interface BookingIntent {
+  flightId: string;
+  passengers: number;
+}
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/';
+  const returnUrl = searchParams.get('returnUrl') || '/';
   const { login, isAuthenticated, isLoading, error, clearError } = useAuthStore();
   
   const [formData, setFormData] = useState({
@@ -25,12 +31,51 @@ export default function SignInPage() {
     return () => clearError();
   }, [clearError]);
   
-  // Redirect if already authenticated
+  // Handle post-authentication actions
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      router.push(redirect);
+      // Check if there's a booking intent in localStorage
+      const storedBookingIntent = localStorage.getItem('bookingIntent');
+      
+      if (storedBookingIntent) {
+        try {
+          const bookingIntent: BookingIntent = JSON.parse(storedBookingIntent);
+          
+          // Create the booking
+          const createBooking = async () => {
+            try {
+              const bookingData = {
+                flight_id: bookingIntent.flightId,
+                number_of_seats: bookingIntent.passengers,
+                payment_method: "credit_card"
+              };
+              
+              const response = await bookingService.createBooking(bookingData);
+              const booking = response.data;
+              
+              // Clear the booking intent from localStorage
+              localStorage.removeItem('bookingIntent');
+              
+              // Redirect to the booking page
+              router.push(`/bookings/${booking.id}`);
+            } catch (err) {
+              console.error('Error creating booking after login:', err);
+              // If booking creation fails, redirect to the flight details page
+              router.push(`/flights/${bookingIntent.flightId}`);
+            }
+          };
+          
+          createBooking();
+        } catch (err) {
+          console.error('Error processing booking intent:', err);
+          router.push(returnUrl);
+        }
+      } else {
+        // No booking intent, just redirect to the return URL
+        router.push(returnUrl);
+      }
     }
-  }, [isAuthenticated, isLoading, router, redirect]);
+  }, [isAuthenticated, isLoading, router, returnUrl]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -83,7 +128,7 @@ export default function SignInPage() {
     
     try {
       await login(formData.email, formData.password);
-      router.push(redirect);
+      router.push(returnUrl);
     } catch (err: any) {
       // Display the error message from the API
       setFormError(err.message || 'Sign in failed. Please try again.');
