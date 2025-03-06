@@ -162,7 +162,7 @@ export default function FlightsPage() {
       
       {/* Search filters */}
       <motion.div 
-        className="glass-effect rounded-xl p-6 mb-8"
+        className="glass-effect rounded-xl p-6 mb-8 container mx-auto"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
@@ -233,11 +233,11 @@ export default function FlightsPage() {
       
       {/* Flight results */}
       {loading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-12 container mx-auto">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       ) : error ? (
-        <div className="space-y-6">
+        <div className="space-y-6 container mx-auto">
           <motion.div 
             className="glass-effect rounded-xl p-6 text-center mb-6"
             initial={{ opacity: 0, y: 20 }}
@@ -306,7 +306,7 @@ export default function FlightsPage() {
         </div>
       ) : flights.length === 0 ? (
         <motion.div 
-          className="glass-effect rounded-xl p-8 text-center"
+          className="glass-effect rounded-xl p-8 text-center max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -330,7 +330,7 @@ export default function FlightsPage() {
           </div>
         </motion.div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 container mx-auto">
           {flights.map((flight, index) => (
             <motion.div
               key={flight.id}

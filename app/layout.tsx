@@ -29,20 +29,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-[#050816] text-white`}
-      >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="min-h-screen bg-black text-white">
         <ThemeProvider>
           <LoadUser />
           {/* <SpaceBackground /> */}
           <TestBackground />
-          <div className="relative z-10">
-            <Navbar />
-            <main className="container mx-auto px-4 py-8">
-              {children}
-            </main>
-          </div>
+          <Navbar />
+          <main className="pt-20 container mx-auto">
+            {children}
+          </main>
         </ThemeProvider>
       </body>
     </html>
